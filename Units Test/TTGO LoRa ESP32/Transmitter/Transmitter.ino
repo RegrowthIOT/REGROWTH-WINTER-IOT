@@ -3,6 +3,8 @@
 #include <SSD1306.h>
 #include <LoRa.h>
 #include "images.h"
+#include <WiFi.h>
+#include <esp_wifi.h>
 
 //#define LORA_BAND    433
 //#define LORA_BAND    868
@@ -24,7 +26,7 @@
 SSD1306 display(I2C_ADDRESS_OF_SCREEN, OLED_SDA, OLED_SCL);
 
 
-// Forward declarations
+Forward declarations
 void displayLoraData(String countStr);
 void showLogo();
 
@@ -75,6 +77,8 @@ void loop() {
   LoRa.beginPacket();
   LoRa.print("hello ");
   LoRa.print(counter);
+  LoRa.print("\n");
+  LoRa.print(WiFi.macAddress());
   LoRa.endPacket();
 
   String countStr = String(counter, DEC);

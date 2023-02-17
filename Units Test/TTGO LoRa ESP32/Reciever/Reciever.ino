@@ -102,15 +102,14 @@ void showLogo() {
   uint8_t x_off = (display.getWidth() - logo_width) / 2;
   uint8_t y_off = (display.getHeight() - logo_height) / 2;
   
-  Serial.println("here 3");
   Serial.flush();
   display.clear();
-  Serial.println("here 4");
+
   Serial.flush();
   display.drawXbm(x_off, y_off, logo_width, logo_height, logo_bits);
-  Serial.println("here 5");
+
   Serial.flush();
   display.display();
-  Serial.println("here 6");
+
   Serial.flush();
 }
