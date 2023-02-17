@@ -7,6 +7,7 @@
 #include <Pangodream_18650_CL.h>
 #include "GatewayLora.h"
 
+
 #define I2C_ADDRESS_OF_SCREEN   0x3C
 
 std::list <PacketInfo> PacketsBuffer = std::list <PacketInfo>();
@@ -30,10 +31,12 @@ void onReceive(int packetSize) {
 
 // #define WIFI_SSID "Trio"
 // #define WIFI_PASSWORD "DanaAmalAida"
-#define WIFI_SSID "Pilot2"
-#define WIFI_PASSWORD "carolteresafarah"
+// #define WIFI_SSID "Pilot2"
+// #define WIFI_PASSWORD "carolteresafarah"
 // #define WIFI_SSID "TechPublic"
 // #define WIFI_PASSWORD ""
+#define WIFI_SSID "Dana(phone)"
+#define WIFI_PASSWORD "dana3004"
 
 #define USER_EMAIL "iot.regrowth@gmail.com"
 #define USER_PASSWORD "Regrowth123"
@@ -248,8 +251,8 @@ void trasnmitToFirebase (PacketInfo* packet) {
     parseTime(packet->time_received, date, time, timeRange);
     String GWId= WiFi.macAddress();
     bool batteryLow= (((packet->rfid_reading).toInt())==0);    
-    Firebase.setFloat(fbdo, "/test/Users/" +user+ "/Data/Animal/" + animalType+ "/"+ animalNumber + "/" + date +"/Weight", weight);
-    float activity= Firebase.getFloat( fbdo, "/test/Users/" + user+ "/Data/Animal" + animalType + "/" +animalNumber + "/" +date + "/Activity");
+    Firebase.setFloat(fbdo, "/test/Users/" +user+ "/Data/Animal/" + animalType+ "Number/"+ animalNumber + "/" + date +"/Weight", weight);
+    float activity= Firebase.getFloat( fbdo, "/test/Users/" + user+ "/Data/Animal" + animalType + "/Number" +animalNumber + "/" +date + "/Activity");
     if (!activity){ 
       activity=1;
     }
@@ -268,3 +271,4 @@ void trasnmitToFirebase (PacketInfo* packet) {
     Firebase.setBool(fbdo, "/test/Users/" +user + "/Animal/" + animalType+ "/Node/" + numOfNode + "/BatteryLow", batteryLow ); 
 
 }
+

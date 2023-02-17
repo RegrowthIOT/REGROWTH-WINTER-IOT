@@ -27,6 +27,7 @@
   }
 
 
+
   void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display)
   {
     if(PacketsBuffer->size()>0)
@@ -54,6 +55,24 @@
       display->drawString(0, 40, "Ready to Receive");
       display->display();
     }      
+  }
+
+  void displayAnimalQuantity (std::list<PacketInfo>* PacketsBuffer, SSD1306* display, String user, FirebaseData fbdo)
+  {
+    if(PacketsBuffer->size()>0)
+    {
+      String dev_name= "";
+      dev_name+= PacketsBuffer->front().device_name; 
+      float numberOfChickens= Firebase.getFloat( fbdo, "/test/Users/" + user+ "/Data/Animal/Number/Chicken/");
+      float numberOfPigs= Firebase.getFloat( fbdo, "/test/Users/" + user+ "/Data/Animal/Number/Pigs/");
+      float numberOfSheeps= Firebase.getFloat( fbdo, "/test/Users/" + user+ "/Data/Animal/Number/Goat/");
+      String Chickens= "Chickens:" + String(numberOfChickens);
+      display->drawString(0,0, Chickens);
+      String Pigs= "Pigs" + String(numberOfPigs);
+      display->drawString(0,0, Pigs);
+      String Sheeps = "Sheeps" + String(numberOfSheeps);
+      display->drawString(0,0, Sheeps);
+  }
   }
 
 
