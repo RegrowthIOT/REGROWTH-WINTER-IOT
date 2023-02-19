@@ -13,30 +13,33 @@
 std::list <PacketInfo> PacketsBuffer = std::list <PacketInfo>();
 std::map <String, ANIMAL_TYPE> Nodes = std::map <String, ANIMAL_TYPE>(); //key = device_name (node)
                                            // data = animal_type (in node)
-
+char* filename = (char*)malloc(sizeof(char)*FILENAME_SIZE);
+String current_log_filename;
 SSD1306 display(I2C_ADDRESS_OF_SCREEN, OLED_SDA, OLED_SCL);
 Pangodream_18650_CL BL;
 
 void onReceive(int packetSize) {
   String message = "";
-
   while (LoRa.available()) {
     message += (char)LoRa.read();
   }
   Serial.print("Gateway Receive: ");
   Serial.println(message);
+  int rssi= LoRa.packetRssi();
+  Serial.println("NO SEG1");
+  fillPacketsBuffer(&PacketsBuffer ,message,rssi,&current_log_filename);
 
-  fillPacketsBuffer(&PacketsBuffer ,message,LoRa.packetRssi());
 }
 
-// #define WIFI_SSID "Trio"
-// #define WIFI_PASSWORD "DanaAmalAida"
+#define WIFI_SSID "Trio"
+#define WIFI_PASSWORD "DanaAmalAida"
 // #define WIFI_SSID "Pilot2"
 // #define WIFI_PASSWORD "carolteresafarah"
 // #define WIFI_SSID "TechPublic"
 // #define WIFI_PASSWORD ""
-#define WIFI_SSID "Dana(phone)"
-#define WIFI_PASSWORD "dana3004"
+
+// #define WIFI_SSID "Dana(phone)"
+// #define WIFI_PASSWORD "dana3004"
 
 #define USER_EMAIL "iot.regrowth@gmail.com"
 #define USER_PASSWORD "Regrowth123"
@@ -140,9 +143,10 @@ void setup()
     Serial.println("Failed to obtain time");
     return;
   }
-  
-  init_sdcard_log(&timeinfo);
-
+  init_sdcard_log(&timeinfo,&filename);
+  strcpy(current_log_filename, ((String(filename)).substring(1,(String(filename)).length())).c_str());
+  //current_log_filename=((String(filename)).substring(1,(String(filename)).length()));
+  //Serial.println(String(current_log_filename));
   // Configure the LoRA radio
   SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DI0);
@@ -174,7 +178,6 @@ void parseTime(String str, String &date, String &time, String &timeRange) {
 void loop()
 {  
 
-
   long rssi = WiFi.RSSI();
   display.clear();
   displayWifi(&display,rssi,(WiFi.status()!= WL_CONNECTED));
@@ -196,21 +199,21 @@ void loop()
 
   unsigned long currentMillis = millis();
   if ((currentMillis - previousMillis) %interval == 0) { //this means that 12 hours have passed 
-
-    Serial.printf("Reading file: \n"); 
-  File file = SD.open(current_log_filename);
-  if(!file){
-    Serial.println("Failed to open file for reading");
-    return;
-  }
-
-  PacketInfo packet("A1","12836",2373,13,0.67,3.3,0.9,28,"Mon Feb 06 18:33:13 2023");
+  // if (true){
+  PacketInfo packet("A1","12836",2373,13,0.67,3.3,0.9,28,"Mon Feb 06 18:33:13 2023"); //fictive packet, will be filled with real data.
   //bool indicator= false;
+    Serial.printf("Reading file: \n"); 
+    File file = SD.open(current_log_filename);
+    if(!file){
+      Serial.println(current_log_filename);
+      Serial.println("Failed to open file for reading");
+      return;
+
+    }
 
   while (get_packet_from_sd(file,&packet)){
+    Serial.println("no enter");
   if (Firebase.ready()) 
-  { 
-    
     trasnmitToFirebase(&packet);
     delay(200);
 //     Serial.printf("Get Device Name  %s\n", Firebase.getString(fbdo, "/test/device_name") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str());
@@ -222,9 +225,8 @@ void loop()
 //     Serial.printf("Get Animal Weight  %s\n", Firebase.getInt(fbdo, "/test/animal_weight") ? String(fbdo.to<int>()).c_str() : fbdo.errorReason().c_str());
   }
   file.close();
-  delay(2500);
   }
-  }
+  delay(5000);
 }
 
 void trasnmitToFirebase (PacketInfo* packet) {

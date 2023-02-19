@@ -27,7 +27,6 @@ const int   daylightOffset_sec = 3600;
 
 
 SPIClass spi = SPIClass(VSPI);
-char* current_log_filename = (char*)malloc(sizeof(char)*FILENAME_SIZE);
 bool am = true;
 String packet_array[8]; 
 
@@ -46,19 +45,25 @@ public:
     String device_name;
     String rfid_reading;
     int animal_weight;
-    float temperature;
-    float humidity;
+    double temperature;
+    double humidity;
     double voltage;
     double soc;
     int RSSI;
 	  String time_received;
 	  bool low_battery_report=false;
 	
-	PacketInfo(String device_name, String rfid_reading, int animal_weight, float temperature, float humidity,double voltage, double soc, int RSSI, String time_received):  animal_weight(animal_weight), temperature(temperature), humidity(humidity),voltage(voltage), soc(soc), RSSI(RSSI)
+	PacketInfo(String device_name_r, String rfid_reading_r, int animal_weight_r, double temperature_r, double humidity_r,double voltage_r, double soc_r, int RSSI_r, String time_received_r)
 	{
-    this->device_name = device_name;
-    this->rfid_reading = rfid_reading;
-    this->time_received = time_received;
+    this->animal_weight= animal_weight_r;
+    this->temperature=temperature_r;
+    this->humidity=humidity_r;
+    this->voltage=voltage_r;
+    this->soc=soc_r;
+    this->RSSI=RSSI_r;
+    this->device_name = device_name_r;
+    this->rfid_reading = rfid_reading_r;
+    this->time_received = time_received_r;
 		if(rfid_reading == BATTERY_LOW){
 			low_battery_report = true;
 		}
@@ -153,7 +158,7 @@ void deleteFile(fs::FS &fs, const char * path){
   }
 }
 
-void init_sdcard_log(struct tm* timeinfo){
+void init_sdcard_log(struct tm* timeinfo, char** current_log_filename ){
 
   String log_name = '/'+String(asctime(timeinfo)).substring(4,10) + (am? " am":" pm") + ".txt"; // "/+ DAY_OF_WEEK MONTH DAY + am/pm +.txt"
   //TODO:: check if file already exists -> 
@@ -162,32 +167,46 @@ void init_sdcard_log(struct tm* timeinfo){
   appendFile(SD, log_name.c_str(), "Gateway Packet Log\n");
   appendFile(SD, log_name.c_str(), "Gateway Address: "); 
   appendFile(SD,log_name.c_str(),(WiFi.macAddress() +"\n").c_str());
-  strcpy(current_log_filename, log_name.c_str());
-  am = (am? false : true);
+  strcpy(*current_log_filename, log_name.c_str());
+  am = (am? false : true);//TODO:: updTE Based on time of day
   Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
   Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 }
 
-void log_packet_sd(PacketInfo* new_packet){
+void log_packet_sd(PacketInfo* new_packet, char** current_log_filename){
   
+  //current_log_filename++;
+  Serial.println("FILENAME:");
+  Serial.println(*current_log_filename);
   if(new_packet ->low_battery_report){
-    appendFile(SD, current_log_filename, "Low Battery Report received from device:\n");
-    appendFile(SD, current_log_filename, "Device: "); appendFile(SD,current_log_filename, new_packet->device_name.c_str());
-    appendFile(SD, current_log_filename, "\nVoltage Reading: "); appendFile(SD,current_log_filename, String(new_packet->voltage).c_str());
-    appendFile(SD, current_log_filename, "\nTime Received: "); appendFile(SD,current_log_filename,(new_packet->time_received.c_str()));
-    appendFile(SD, current_log_filename, "\n");                                                                                                          
+    appendFile(SD, *current_log_filename, "Low Battery Report received from device:\n");
+    appendFile(SD, *current_log_filename, "Device: "); 
+    appendFile(SD,*current_log_filename, new_packet->device_name.c_str());
+    appendFile(SD, *current_log_filename, "\nVoltage Reading: "); 
+    appendFile(SD,*current_log_filename, String(new_packet->voltage).c_str());
+    appendFile(SD, *current_log_filename, "\nTime Received: "); 
+    appendFile(SD,*current_log_filename,(new_packet->time_received.c_str()));
+    appendFile(SD, *current_log_filename, "\n");                                                                                                          
     return;
   }
-  appendFile(SD, current_log_filename, "Package Received from device:\n");
-  appendFile(SD, current_log_filename, "Device: "); appendFile(SD,current_log_filename, new_packet->device_name.c_str());
-  appendFile(SD, current_log_filename, "\nAnimal ID: "); appendFile(SD,current_log_filename, new_packet->rfid_reading.c_str());
-  appendFile(SD, current_log_filename, "\nAnimal Weight: "); appendFile(SD,current_log_filename, String(new_packet->animal_weight).c_str());
-  appendFile(SD, current_log_filename, "\nTemperature: "); appendFile(SD,current_log_filename, String(new_packet->temperature).c_str());
-  appendFile(SD, current_log_filename, "\nHumidity: "); appendFile(SD,current_log_filename, String(new_packet->humidity).c_str());
-  appendFile(SD, current_log_filename, "\nVoltage Reading: "); appendFile(SD,current_log_filename, String(new_packet->voltage).c_str());
-  appendFile(SD, current_log_filename, "\nSoC: "); appendFile(SD,current_log_filename, String(new_packet->soc).c_str());
-  appendFile(SD, current_log_filename, "\nTime Received: "); appendFile(SD,current_log_filename,(new_packet->time_received.c_str()));
-  appendFile(SD, current_log_filename, "\n");
+  appendFile(SD, *current_log_filename, "Package Received from device:\n");
+  appendFile(SD,*current_log_filename, "Device: "); 
+  appendFile(SD,*current_log_filename, new_packet->device_name.c_str());
+  appendFile(SD, *current_log_filename, "\nAnimal ID: "); 
+  appendFile(SD,*current_log_filename, new_packet->rfid_reading.c_str());
+  appendFile(SD, *current_log_filename, "\nAnimal Weight: "); 
+  appendFile(SD,*current_log_filename, String(new_packet->animal_weight).c_str());
+  appendFile(SD, *current_log_filename, "\nTemperature: "); 
+  appendFile(SD,*current_log_filename, String(new_packet->temperature).c_str());
+  appendFile(SD, *current_log_filename, "\nHumidity: "); 
+  appendFile(SD,*current_log_filename, String(new_packet->humidity).c_str());
+  appendFile(SD, *current_log_filename, "\nVoltage Reading: "); 
+  appendFile(SD,*current_log_filename, String(new_packet->voltage).c_str());
+  appendFile(SD, *current_log_filename, "\nSoC: "); 
+  appendFile(SD,*current_log_filename, String(new_packet->soc).c_str());
+  appendFile(SD, *current_log_filename, "\nTime Received: "); 
+  appendFile(SD,*current_log_filename,(new_packet->time_received.c_str()));
+  appendFile(SD, *current_log_filename, "\n");
 
 }
 
@@ -204,7 +223,6 @@ bool get_packet_from_sd(File file, PacketInfo* packet_to_fill){
     Serial.println("Failed to open file for reading");
     return;
   }*/
-  //UNTIL HERE AND THE file.close();
 
   while( file.available() ){
     String line = file.readStringUntil('\n');
@@ -243,6 +261,7 @@ bool get_packet_from_sd(File file, PacketInfo* packet_to_fill){
       //Serial.println(packet_to_fill->time_received);
 
       line = file.readStringUntil('\n');//"\n"
+      //file.close();
       return true;
     }
     else if(line == "Low Battery Report received from device:"){
@@ -262,6 +281,7 @@ bool get_packet_from_sd(File file, PacketInfo* packet_to_fill){
       packet_to_fill -> rfid_reading = BATTERY_LOW;
 
       line = file.readStringUntil('\n');//"\n"
+      //file.close();
       return true;
     }
   }
@@ -285,11 +305,10 @@ void parsePacket (const String& str, String array[8]) {
     }
 }
 
-void fillPacketsBuffer(std::list<PacketInfo>* packetBuffer, String& incomingPacket, int rssi)
+void fillPacketsBuffer(std::list<PacketInfo>* packetBuffer, String& incomingPacket, int rssi, char** current_log_filename)
 {
-
-  parsePacket(incomingPacket, packet_array);
-
+   parsePacket(incomingPacket, packet_array);
+   Serial.println(*current_log_filename);
   Serial.println(incomingPacket.substring(0,2));
   Serial.println(incomingPacket.substring(3,13));
 Serial.println((incomingPacket.substring(14,17)).toInt());
@@ -306,12 +325,19 @@ Serial.println(rssi);
   }
 
   Serial.println(asctime(&timeinfo));
-  // PacketInfo new_packet((incomingPacket.substring(0,2)).c_str(), (incomingPacket.substring(3,13)).c_str(), (incomingPacket.substring(14,17)).toInt(), (incomingPacket.substring(18,21)).toFloat(), (incomingPacket.substring(22,24)).toFloat(),
-  //                       (incomingPacket.substring(25,27)).toDouble(), (incomingPacket.substring(28,30)).toDouble(), rssi, asctime(&timeinfo));
 
-  packetBuffer->push_back(PacketInfo("A0", "003", 50, 25, 0.73,0.5,0.3, -53,"Mon Feb 06 "));
-   Serial.println("no seg here4");
-  //log_packet_sd(&new_packet);
+  Serial.println("no seg here1");
+  PacketInfo new_packet(incomingPacket.substring(0,2),incomingPacket.substring(3,13), (incomingPacket.substring(14,17)).toInt(), (incomingPacket.substring(18,21)).toDouble(), (incomingPacket.substring(22,24)).toDouble(),(incomingPacket.substring(25,27)).toDouble(), (incomingPacket.substring(28,30)).toDouble(), rssi, String(asctime(&timeinfo)));
+  //PacketInfo new_packet("A0", "003", 50, 25, 0.73,0.5,0.3, -53,"Mon Feb 06 ");
+  packetBuffer->push_back(new_packet);
+//   //packetBuffer->push_back(PacketInfo("A0", "003", 50, 25, 0.73,0.5,0.3, -53,"Mon Feb 06 "));
+//   for (auto it = packetBuffer->begin(); it != packetBuffer->end(); it++) {
+//     Serial.println("Device name: " + it->device_name);
+// }
+  Serial.println("no seg here2");
+  log_packet_sd(&new_packet,current_log_filename);
+  Serial.println("no seg here3");
+
 }
 
 
