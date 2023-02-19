@@ -13,6 +13,7 @@ We are three students studying at the Technion - Israel Institute of Technology 
 * Dana Asfour
 * Aida Mwais 
 * Eitan Manor
+
 The course that this project is a part of is 236333 - project in IOT. The course is a part of the ICST lab at the faculty.
 
 
