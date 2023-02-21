@@ -34,6 +34,8 @@ The repository is split into two main components:
 | esp8266-oled-ssd1306    |   ThingPulse version 4.3.0  | This library drives the OLED display running on the Arduino/ESP8266 & ESP32 platforms |
 | LoRa |   Sandeep Mistry version 0.8.0  | An Arduino library for sending and receiving data using LoRa Radio waves   |
 | esp32  |   Espressif Systems version 1.0.6   | Library that allows working with ESP32  |
+| FirebaseESP32 | Mobizt version 4.3.6 | Google's Firebase Realtime Database Arduino Library for ESP32 | 
+
 
 
 
