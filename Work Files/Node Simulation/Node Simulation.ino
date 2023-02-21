@@ -211,9 +211,9 @@ void displayLoraData(String countStr,char* transmitted) {
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_10);
   
-  display.drawString(0, 0, "Sending packet: ");
-  display.drawString(90, 0, countStr);
-  display.drawString(0, 15, ((String)splitString(transmitted,true)));
-  display.drawString(0, 30, ((String)splitString(transmitted,false)));
+  display.drawString(0, 20, "Sending packet: ");
+  display.drawString(90, 20, countStr);
+  display.drawString(0, 35, ((String)splitString(transmitted,true)));
+  display.drawString(0, 45, ((String)splitString(transmitted,false)));
   display.display();
 }
