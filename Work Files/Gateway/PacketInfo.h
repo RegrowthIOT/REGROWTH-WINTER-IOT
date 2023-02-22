@@ -282,7 +282,7 @@ bool get_packet_from_sd(File file, PacketInfo& packet_to_fill) {
 
   while (file.available()) {
     String line = file.readStringUntil('\n');
-    Serial.println("the line in get packet from sd is:" + line);
+    //Serial.println("the line in get packet from sd is:" + line);
     if (line == "Package Received from device:") {
       line = file.readStringUntil('\n');  //"Device: "
       packet_to_fill.device_name = get_packet_parameter(String(line));
@@ -320,7 +320,7 @@ bool get_packet_from_sd(File file, PacketInfo& packet_to_fill) {
       //file.close();
       return true;
     } else if (line == "Low Battery Report received from device:") {
-      Serial.println("the line in get packet from sd is:" + line);
+      //Serial.println("the line in get packet from sd is:" + line);
       line = file.readStringUntil('\n');  //"Device: "
       packet_to_fill.device_name = get_packet_parameter(String(line));
       //Serial.println(packet_to_fill->device_name);
@@ -340,7 +340,7 @@ bool get_packet_from_sd(File file, PacketInfo& packet_to_fill) {
       return true;
     }
   }
-  Serial.println("\nI'm guessing u never reach here?");
+  //Serial.println("\nI'm guessing u never reach here?");
   return false;
 }
 

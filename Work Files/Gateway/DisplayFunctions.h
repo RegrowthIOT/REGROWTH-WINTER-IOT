@@ -56,7 +56,7 @@ void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display
       line_str = "Node ";
       line_str += PacketsBuffer->front().device_name;
       line_str += " battery low ";
-      line_str += String(((int)(PacketsBuffer->front().soc * 100)), DEC);
+      line_str += String(((int)(PacketsBuffer->front().soc )), DEC);
       line_str += "%";
       time_on_screen = 4000;
     }
@@ -168,15 +168,11 @@ void displayWifi(SSD1306* display, long rssi, bool notConnected) {
  * @param goatCount - number of goats that will be displayed on the screen
  */
 void updateNodeCount(FirebaseData* fbdo, String user, int* chickenCount, int* pigCount, int* sheepCount, int* goatCount) {
-    int fbchicken = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Chicken/Number");// ? String(fbdo.to<int>()).c_str() : fbdo.errorReason().c_str();
-    int fbpig = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Pigs/Number");
-    int fbsheep = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Sheep/Number");
-    int fbgoat = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Goat/Number");
+    *chickenCount = (Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Chicken/Number") ? (fbdo->to<int>()) : 0) ;
+    *pigCount = (Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Pig/Number") ? (fbdo->to<int>()) : 0);
+    *sheepCount = (Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Sheep/Number") ? (fbdo->to<int>()) : 0);
+    *goatCount = (Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Goat/Number")? (fbdo->to<int>()) : 0);
 
-    *chickenCount = (fbchicken == 0 ? *chickenCount : fbchicken);
-    *pigCount = (fbpig == 0 ? *pigCount : fbpig);
-    *sheepCount = (fbsheep == 0 ? *sheepCount : fbsheep);
-    *goatCount = (fbgoat == 0 ? *goatCount : fbgoat);
 }
 
 

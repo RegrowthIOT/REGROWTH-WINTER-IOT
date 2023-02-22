@@ -11,25 +11,9 @@
 
 #define WIFI_SSID "Trio"
 #define WIFI_PASSWORD "DanaAmalAida"
-// #define WIFI_SSID "EHABV24"
-// #define WIFI_PASSWORD "15011501"
-// #define WIFI_SSID "Pilot2"
-// #define WIFI_PASSWORD "carolteresafarah"
-// #define WIFI_SSID "TechPublic"
-// #define WIFI_PASSWORD ""
 
-
-// #define USER_EMAIL "iot.regrowth@gmail.com"
-// #define USER_PASSWORD "Regrowth123"
 #define USER_EMAIL "iot.regrowth@gmail.com"
 #define USER_PASSWORD "regrowth123"
-
-
-/* 2. Define the API Key */
-//#define API_KEY "0vh0uCSsK39x2AUAAavXKk8cRfkcGrFck3rpc6gf"
-
-/* 3. Define the RTDB URL */
-//#define DATABASE_URL "https://regrowth-c498e-default-rtdb.europe-west1.firebasedatabase.app/"  //<databaseName>.firebaseio.com or <databaseName>.<region>.firebasedatabase.app
 
 #define API_KEY "AIzaSyAbULIZmjSP87utoUVa5Mf1Jgz13Ffuolk"
 #define DATABASE_SECRET "0vh0uCSsK39x2AUAAavXKk8cRfkcGrFck3rpc6gf"
@@ -41,12 +25,14 @@ FirebaseAuth auth;
 FirebaseConfig config;
 String main = "";
 
+// variables for obtaining the local time via wifi
 const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 2 * 3600;  //+2 UTC
 const int daylightOffset_sec = 3600;
 
+//variables for the time interval of sending the report to the firebase
 unsigned long previousMillis = 0;
-const long interval = 43200000;  // interval at which to send data (12 hours in milliseconds)
+const long interval = 60000;// 43200000;  // interval at which to send data (12 hours in milliseconds = 12*60*60*1000)
 
 int chickenCount = 0;
 int pigCount = 0;
@@ -102,9 +88,9 @@ void parseTime(String str, String& date, String& time, String& timeRange) {
  * Transmitting packet information received from nodes to the firebase
  * @param packet - a class that contains all the data from the packet
  */
-void trasnmitToFirebase(PacketInfo& packet) {
+void transmitToFirebase(PacketInfo& packet) {
   Serial.println("transmitting to firebase...");
-  packet.PrintPacket();
+  packet.PrintPacket(); Serial.println();
   
   String email = USER_EMAIL;
   int atIndex = email.indexOf("@");
@@ -127,11 +113,9 @@ void trasnmitToFirebase(PacketInfo& packet) {
   String numOfNode = packet.device_name;
   String animalType;
 
-
-  Serial.print("ready");
   /** adding the node to the available nodes list under the user name**/
   animalType = Firebase.getString(fbdo, "/test/Users/" + String(user) + "/Node/" + String(numOfNode) + "/") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str();
-  Serial.println(animalType);
+  //Serial.println(animalType);
   if (animalType == String(fbdo.errorReason().c_str())) {//if the reason is path not found then add empty string
   //if the reason is bad request then return
     animalType = " ";
@@ -139,6 +123,8 @@ void trasnmitToFirebase(PacketInfo& packet) {
 
   //Firebase.setString(fbdo, "/test/Users/Node/", "Testing non dynamic path");
   Firebase.setString(fbdo, "/test/Users/" + user + "/Node/" + numOfNode + "/", animalType);
+
+  if(animalType != " "){
 
   if (batteryLow) {
     Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Humidity", humidity);
@@ -159,7 +145,7 @@ void trasnmitToFirebase(PacketInfo& packet) {
     activity++;
   }
   Firebase.setInt(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "/" + animalNumber + "/" + date + "/Activity", activity);
-  int count = Firebase.getInt(fbdo, "/test/Users/" + user + "/Date/Animal/" + animalType + "/Number") ? fbdo.to<int>() : 0;
+  int count = Firebase.getInt(fbdo, "/test/Users/" + user + "/Date/Animal/" + animalType + "/Number") ? fbdo.to<int>() :0;
   count++;
   Firebase.setInt(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "/Number", count);
   Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Humidity", humidity);
@@ -169,7 +155,7 @@ void trasnmitToFirebase(PacketInfo& packet) {
   Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Tension", voltage);
   Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/GatewayID", GWId);
   Firebase.setBool(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/BatteryLow", batteryLow);
-  
+  }  
 
 }
 
@@ -345,13 +331,14 @@ void loop() {
 
   //print on incoming nodes
   displayPacketsBuffer(&PacketsBuffer, &display, current_log_filename);
+  
+
+  unsigned long currentMillis = millis();
+  if ( ((currentMillis - previousMillis) > interval) && (WiFi.status() == WL_CONNECTED) && Firebase.ready()) {  //this means that the time interval has passed
+    previousMillis = currentMillis;
 
 
-  unsigned long currentMillis = millis();//(currentMillis - previousMillis) > interval) && 
-  if ((WiFi.status() == WL_CONNECTED) && Firebase.ready()) {  //this means that 12 hours have passed
-    //previousMillis = currentMillis;
-    PacketInfo packet("", "", 0, 0, 0, 0, 0, 0, DUMMY_PACKET);  //fictive packet, will be filled with real data.
-    //bool indicator= false;
+    PacketInfo packet("", "", 0, 0, 0, 0, 0, 0, DUMMY_PACKET);  //dummy packet, will be filled with real data.
     Serial.printf("Reading file: \n");
     File file = SD.open(current_log_filename);
     if (!file) {
@@ -361,25 +348,36 @@ void loop() {
     }
     
     while (get_packet_from_sd(file, packet)) {
-      //Serial.println("no enter");
-      //packet.device_name = "A1";
-      if (Firebase.ready()) {
-        trasnmitToFirebase(packet);
-        delay(200);
+      display.clear();
+      long rssi = WiFi.RSSI();
+      displayWifi(&display, rssi, (WiFi.status() != WL_CONNECTED));
 
+      displayBattery(BL.getBatteryChargeLevel(), &display);
+      displayNodeCount(&display, chickenCount, pigCount, sheepCount, goatCount);
+      display.drawString(0, 50, "Transmitting to FireBase");
+      //print
+      display.display();
+
+      if (Firebase.ready()) {
+        transmitToFirebase(packet);
+        
       }
+      delay(200);
     }
     file.close();
 
-  //once we send all the packets to the firebase we'd start logging on a new file
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  init_sdcard_log(&timeinfo, current_log_filename);
+    //once we send all the packets to the firebase we'd start logging on a new file
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+      Serial.println("Failed to obtain time");
+      return;
+    }
+    init_sdcard_log(&timeinfo, current_log_filename);
+    //delay(1500);
 
   }
   delay(1000);
+
+  
 }
 
