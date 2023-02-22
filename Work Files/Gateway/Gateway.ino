@@ -19,17 +19,21 @@
 // #define WIFI_PASSWORD ""
 
 
+// #define USER_EMAIL "iot.regrowth@gmail.com"
+// #define USER_PASSWORD "Regrowth123"
 #define USER_EMAIL "iot.regrowth@gmail.com"
-#define USER_PASSWORD "Regrowth123"
-
+#define USER_PASSWORD "regrowth123"
 
 
 /* 2. Define the API Key */
-#define API_KEY "0vh0uCSsK39x2AUAAavXKk8cRfkcGrFck3rpc6gf"
+//#define API_KEY "0vh0uCSsK39x2AUAAavXKk8cRfkcGrFck3rpc6gf"
 
 /* 3. Define the RTDB URL */
-#define DATABASE_URL "https://regrowth-c498e-default-rtdb.europe-west1.firebasedatabase.app/"  //<databaseName>.firebaseio.com or <databaseName>.<region>.firebasedatabase.app
+//#define DATABASE_URL "https://regrowth-c498e-default-rtdb.europe-west1.firebasedatabase.app/"  //<databaseName>.firebaseio.com or <databaseName>.<region>.firebasedatabase.app
 
+#define API_KEY "AIzaSyAbULIZmjSP87utoUVa5Mf1Jgz13Ffuolk"
+#define DATABASE_SECRET "0vh0uCSsK39x2AUAAavXKk8cRfkcGrFck3rpc6gf"
+#define DATABASE_URL "regrowth-c498e-default-rtdb.europe-west1.firebasedatabase.app"
 
 //Define Firebase Data object
 FirebaseData fbdo;
@@ -136,12 +140,13 @@ void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display
   }
 }
 
-/**
+/*
 * displayWifi - a function to show on screen bars of wifi, to let the user know if there's a connection and how strong
 * @param display - pointer to the OLED screen where the message will be printed
 * @param rssi - the strength of the wifi signal
 * @param notConnected - boolean paramater to tell us if wifi is connected at all
 */
+
 void displayWifi(SSD1306* display, long rssi, bool notConnected) {
   // display.clear();
   display->setTextAlignment(TEXT_ALIGN_LEFT);
@@ -211,10 +216,10 @@ void displayWifi(SSD1306* display, long rssi, bool notConnected) {
 }
 
 void updateNodeCount(FirebaseData* fbdo, String user, int* chickenCount, int* pigCount, int* sheepCount, int* goatCount) {
-  int fbchicken = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Chicken/Number/");
-  int fbpig = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Pigs/Number/");
-  int fbsheep = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Sheep/Number/");
-  int fbgoat = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Goat/Number/");
+  int fbchicken = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Chicken/Number");
+  int fbpig = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Pigs/Number");
+  int fbsheep = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Sheep/Number");
+  int fbgoat = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Goat/Number");
   *chickenCount = (fbchicken == 0 ? *chickenCount : fbchicken);
   *pigCount = (fbpig == 0 ? *pigCount : fbpig);
   *sheepCount = (fbsheep == 0 ? *sheepCount : fbsheep);
@@ -299,6 +304,14 @@ void parseTime(String str, String& date, String& time, String& timeRange) {
 }
 
 void trasnmitToFirebase(PacketInfo& packet) {
+  Serial.println("transmitting to firebase...");
+  packet.PrintPacket();
+  
+  String email = USER_EMAIL;
+  int atIndex = email.indexOf("@");
+  String user = email.substring(0, atIndex);
+  Serial.println("user is " + user);
+  //Seriral.println("password is ")
   double weight = packet.animal_weight;
   double humidity = packet.humidity;
   double temperature = packet.temperature;
@@ -312,47 +325,25 @@ void trasnmitToFirebase(PacketInfo& packet) {
   parseTime(packet.time_received, date, time, timeRange);
   String GWId = WiFi.macAddress();
   bool batteryLow = (((packet.rfid_reading).toInt()) == 0);
-  String email = USER_EMAIL;
-  int atIndex = email.indexOf("@");
-  String user = email.substring(0, atIndex);
+ 
   String numOfNode = packet.device_name;
   String animalType;
 
 
 
-  if (Firebase.ready()) {
-    //Serial.print("ready");
-    /** adding the node to the available nodes list under the user name**/
-    animalType = Firebase.getString(fbdo, "/test/Users/" + String(user) + "/Node/" + String(numOfNode) + "/") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str();
-    //Serial.println(animalType);
-    if (animalType == String(fbdo.errorReason().c_str())) {
-      animalType = "Chicken";
-    }
-    Firebase.setString(fbdo, "/test/Users/Node/", "Testing non dynamic path");
-    Firebase.setString(fbdo, "/test/Users/" + user + "/Node/" + numOfNode + "/", animalType);
+// if (Firebase.ready()) {
+  Serial.print("ready");
+  /** adding the node to the available nodes list under the user name**/
+  animalType = Firebase.getString(fbdo, "/test/Users/" + String(user) + "/Node/" + String(numOfNode) + "/") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str();
+  Serial.println(animalType);
+  if (animalType == String(fbdo.errorReason().c_str())) {
+    animalType = "Chicken";
+  }
+  //Serial.println(animalType);
+  Firebase.setString(fbdo, "/test/Users/Node/", "Testing non dynamic path");
+  Firebase.setString(fbdo, "/test/Users/" + user + "/Node/" + numOfNode + "/", animalType);
 
-    if (batteryLow) {
-      Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Humidity", humidity);
-      Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Temperature", temperature);
-      Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Battery", battery);
-      Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Connection", connection);
-      Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Tension", voltage);
-      Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/GatewayID", GWId);
-      Firebase.setBool(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/BatteryLow", batteryLow);
-      return;
-    }
-
-    Firebase.setDouble(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "Number/" + animalNumber + "/" + date + "/Weight", weight);
-    int activity = Firebase.getInt(fbdo, "/test/Users/" + user + "/Data/Animal" + animalType + "/Number" + animalNumber + "/" + date + "/Activity") ? fbdo.to<int>() : 0;
-    if (!activity) {
-      activity = 1;
-    } else{
-      activity++;
-    }
-    Firebase.setInt(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "/" + animalNumber + "/" + date + "/Activity", activity);
-    int count = Firebase.getInt(fbdo, "/test/Users/" + user + "/Date/Animal/" + animalType + "/Number") ? fbdo.to<int>() : 0;
-    count++;
-    Firebase.setInt(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "/Number", count);
+  if (batteryLow) {
     Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Humidity", humidity);
     Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Temperature", temperature);
     Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Battery", battery);
@@ -360,7 +351,29 @@ void trasnmitToFirebase(PacketInfo& packet) {
     Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Tension", voltage);
     Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/GatewayID", GWId);
     Firebase.setBool(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/BatteryLow", batteryLow);
+    return;
   }
+
+  Firebase.setDouble(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "Number/" + animalNumber + "/" + date + "/Weight", weight);
+  int activity = Firebase.getInt(fbdo, "/test/Users/" + user + "/Data/Animal" + animalType + "/Number" + animalNumber + "/" + date + "/Activity") ? fbdo.to<int>() : 0;
+  if (!activity) {
+    activity = 1;
+  } else{
+    activity++;
+  }
+  Firebase.setInt(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "/" + animalNumber + "/" + date + "/Activity", activity);
+  int count = Firebase.getInt(fbdo, "/test/Users/" + user + "/Date/Animal/" + animalType + "/Number") ? fbdo.to<int>() : 0;
+  count++;
+  Firebase.setInt(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "/Number", count);
+  Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Humidity", humidity);
+  Firebase.setDouble(fbdo, "/test/Users/" + user + "/Enviroment/Animal/" + animalType + "/" + animalNumber + "/Date/" + date + "/" + timeRange + "/Temperature", temperature);
+  Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Battery", battery);
+  Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Connection", connection);
+  Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Tension", voltage);
+  Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/GatewayID", GWId);
+  Firebase.setBool(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/BatteryLow", batteryLow);
+  //}
+
 }
 
 void setup() {
@@ -394,9 +407,11 @@ void setup() {
   /* Assign the api key (required) */
   config.api_key = API_KEY;
   config.database_url = DATABASE_URL;
+  config.signer.tokens.legacy_token = "<database secret>";
   auth.user.email = USER_EMAIL;
   auth.user.password = USER_PASSWORD;
-  Firebase.begin(&config, &auth);
+  //Firebase.begin(&config, &auth);
+  Firebase.begin(DATABASE_URL, DATABASE_SECRET);
   Firebase.setDoubleDigits(5);
 
   /*OLED display set-up */
@@ -476,9 +491,6 @@ void setup() {
   /* Creating a log on sd*/
   init_sdcard_log(&timeinfo, current_log_filename);
 
-  //test:
-  //listDir(SD, "/", 0);
-
   //Serial.println(temp);
   Serial.println(current_log_filename);
 
@@ -508,15 +520,10 @@ void loop() {
   //print on incoming nodes
   displayPacketsBuffer(&PacketsBuffer, &display, current_log_filename);
 
-  // toggle the led to give a visual indication the packet was sent
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(250);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(250);
 
-  unsigned long currentMillis = millis();
-  if (((currentMillis - previousMillis) > interval) && (WiFi.status() == WL_CONNECTED) && Firebase.ready()) {  //this means that 12 hours have passed
-    previousMillis = currentMillis;
+  //unsigned long currentMillis = millis();(currentMillis - previousMillis) > interval) && 
+  if ((WiFi.status() == WL_CONNECTED) && Firebase.ready()) {  //this means that 12 hours have passed
+    //previousMillis = currentMillis;
     PacketInfo packet("", "", 0, 0, 0, 0, 0, 0, DUMMY_PACKET);  //fictive packet, will be filled with real data.
     //bool indicator= false;
     Serial.printf("Reading file: \n");
@@ -526,22 +533,18 @@ void loop() {
       Serial.println("Failed to open file for reading");
       return;
     }
-
+    
     while (get_packet_from_sd(file, &packet)) {
-      Serial.println("no enter");
+      //Serial.println("no enter");
+      //packet.device_name = "A1";
       if (Firebase.ready()) {
         trasnmitToFirebase(packet);
         delay(200);
-        //     Serial.printf("Get Device Name  %s\n", Firebase.getString(fbdo, "/test/device_name") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str());
-        //     device_name=fbdo.to<String>();
-        //    Serial.printf("Get Animal Name %s\n", Firebase.getString(fbdo, "/test/animal_ID") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str());
-        //     animal_ID=fbdo.to<String>();
-        //    Serial.printf("Get Animal Type  %s\n", Firebase.getString(fbdo, "/test/animal_type") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str());
-        //     animal_type=fbdo.to<String>();
-        //     Serial.printf("Get Animal Weight  %s\n", Firebase.getInt(fbdo, "/test/animal_weight") ? String(fbdo.to<int>()).c_str() : fbdo.errorReason().c_str());
+
       }
-      file.close();
     }
+    file.close();
   }
+
   delay(1000);
 }
