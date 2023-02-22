@@ -7,7 +7,7 @@ graph TD;
     Users-->Enviroment;
     Users-->Animal;
     Users-->NodeList;
-    AnimalData-->DataAnimalType;
+    Data-->DataAnimalType;
     DataAnimalType-->DataTagID;
     TagID-->Date;
     Date--> Activity;
