@@ -380,8 +380,6 @@ void loop() {
   init_sdcard_log(&timeinfo, current_log_filename);
 
   }
-
-
   delay(1000);
 }
 
