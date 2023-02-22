@@ -9,10 +9,10 @@
 
 #define I2C_ADDRESS_OF_SCREEN 0x3C
 
-// #define WIFI_SSID "Trio"
-// #define WIFI_PASSWORD "DanaAmalAida"
-#define WIFI_SSID "EHABV24"
-#define WIFI_PASSWORD "15011501"
+#define WIFI_SSID "Trio"
+#define WIFI_PASSWORD "DanaAmalAida"
+// #define WIFI_SSID "EHABV24"
+// #define WIFI_PASSWORD "15011501"
 // #define WIFI_SSID "Pilot2"
 // #define WIFI_PASSWORD "carolteresafarah"
 // #define WIFI_SSID "TechPublic"
@@ -54,13 +54,18 @@ int sheepCount = 0;
 int goatCount = 0;
 
 std::list<PacketInfo> PacketsBuffer = std::list<PacketInfo>();
-std::map<String, ANIMAL_TYPE> Nodes = std::map<String, ANIMAL_TYPE>();  //key = device_name (node)
+//std::map<String, ANIMAL_TYPE> Nodes = std::map<String, ANIMAL_TYPE>();  //key = device_name (node)
                                                                         // data = animal_type (in node)
 
 String current_log_filename;
 SSD1306 display(I2C_ADDRESS_OF_SCREEN, OLED_SDA, OLED_SCL);
 Pangodream_18650_CL BL;
 
+/**
+ * A function that is called once the lora buffer is filled with the received packet
+ * @param packetSize - size of the packet received through the lora
+ * note: This function is called unsynchronously
+ */
 void onReceive(int packetSize) {
   String message = "";
   while (LoRa.available()) {
@@ -69,233 +74,23 @@ void onReceive(int packetSize) {
   Serial.print("Gateway Receive: ");
   Serial.println(message);
   int rssi = LoRa.packetRssi();
-  // Serial.println("NO SEG1");
   fillPacketsBuffer(&PacketsBuffer, message, rssi);
 }
 
-
-
-/************************************************************************************************************************************/
-
 /**
- * displayBattery - show user the current percentage battery has left
- * @param percent - int from 0 to 100 to represent the battery percentage
- * @param display - pointer to the OLED screen where the message will be printed
+ * obtaining the values of a target time string, the date, time and timerange
+ * the string is in the format "DAY-OF-WEEK MONTH DAY HH:MM:SS YEAR"
+ * (e.g. Mon Feb 02 18:33:13 2023)
+ * @param str - target time string to be parsed
+ * @param date - a string containing the date
+ * @param time - a string containing hours:minutes:seconds
+ * @param timeRange - a variable specifying whether it's AM or PM
  */
-void displayBattery(uint8_t percent, SSD1306* display) {
-  // display.clear();
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->setFont(ArialMT_Plain_10);
-
-  display->drawProgressBar(100, 22, 20, 5, percent);
-
-  String percentStr = String(percent, DEC);
-  percentStr += "%";
-  display->drawString(100, 27, percentStr);
-  display->display();
-}
-
-/**
- * displayPacketsBuffer - if PacketsBuffer has packets save them to SD and print them to OLED
- * @param PacketsBuffer - where we keep the packets we still in need to be printed and be put in the SD and printed
- * @param display - pointer to the OLED screen where the message will be printed
- */
-void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display, String& current_log_filename) {
-  if (PacketsBuffer->size() > 0) {
-    int time_on_screen = 1500;
-
-    //print about packet received
-    String line_str = "Received,Node ";
-    line_str += PacketsBuffer->front().device_name;
-    line_str += ",rssi ";
-    line_str += String(PacketsBuffer->front().RSSI, DEC);
-
-    //in case of "low battery" message
-    if (PacketsBuffer->front().rfid_reading == BATTERY_LOW) {
-      line_str = "Node ";
-      line_str += PacketsBuffer->front().device_name;
-      line_str += " battery low ";
-      line_str += String(((int)(PacketsBuffer->front().soc * 100)), DEC);
-      line_str += "%";
-      time_on_screen = 4000;
-    }
-
-    display->drawString(0, 50, line_str);
-
-    //print
-    display->display();
-
-    //delay
-    delay(time_on_screen);
-
-    //log to sd
-
-    log_packet_sd(PacketsBuffer->front(), current_log_filename);
-
-    //pop
-    PacketsBuffer->pop_front();
-  } else {
-    display->drawString(0, 50, "Ready to Receive");
-    display->display();
-  }
-}
-
-/*
-* displayWifi - a function to show on screen bars of wifi, to let the user know if there's a connection and how strong
-* @param display - pointer to the OLED screen where the message will be printed
-* @param rssi - the strength of the wifi signal
-* @param notConnected - boolean paramater to tell us if wifi is connected at all
-*/
-
-void displayWifi(SSD1306* display, long rssi, bool notConnected) {
-  // display.clear();
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->setFont(ArialMT_Plain_10);
-  // String rssi_str = String(rssi, DEC);
-  // display.drawString(65, 0, rssi_str);
-
-  if (notConnected) {
-    if (rssi == 0) {
-      display->drawString(90, 0, "Wifi Not");
-      display->drawString(90, 10, "Found");
-    } else {
-      display->drawString(90, 0, "Not");
-      display->drawString(75, 10, "Connected");
-    }
-  } else {
-    if (rssi == 0) {
-      display->drawString(90, 0, "Wifi Not");
-      display->drawString(90, 10, "Found");
-    } else if (rssi >= -50) {
-      display->fillRect(102, 7, 4, 1);
-      display->fillRect(107, 6, 4, 2);
-      display->fillRect(112, 4, 4, 4);
-      display->fillRect(117, 2, 4, 6);
-      display->fillRect(122, 0, 4, 8);
-      // display.sendBuffer();
-    } else if (rssi < -50 & rssi >= -65) {
-      display->fillRect(102, 7, 4, 1);
-      display->fillRect(107, 6, 4, 2);
-      display->fillRect(112, 4, 4, 4);
-      display->fillRect(117, 2, 4, 6);
-      display->drawRect(122, 0, 4, 8);
-      // display.sendBuffer();
-    } else if (rssi < -65 & rssi >= -75) {
-      display->fillRect(102, 8, 4, 1);
-      display->fillRect(107, 6, 4, 2);
-      display->fillRect(112, 4, 4, 4);
-      display->drawRect(117, 2, 2, 6);
-      display->drawRect(122, 0, 4, 8);
-      // display.sendBuffer();
-    } else if (rssi < -75 & rssi >= -85) {
-      display->fillRect(102, 8, 4, 1);
-      display->fillRect(107, 6, 4, 2);
-      display->drawRect(112, 4, 4, 4);
-      display->drawRect(117, 2, 4, 6);
-      display->drawRect(122, 0, 4, 8);
-      // display.sendBuffer();
-    } else if (rssi < -85 & rssi >= -96) {
-      display->fillRect(102, 8, 4, 1);
-      display->drawRect(107, 6, 4, 2);
-      display->drawRect(112, 4, 4, 4);
-      display->drawRect(117, 2, 4, 6);
-      display->drawRect(122, 0, 4, 8);
-      // display.sendBuffer();
-    } else {
-      display->drawRect(102, 8, 4, 1);
-      display->drawRect(107, 6, 4, 2);
-      display->drawRect(112, 4, 4, 4);
-      display->drawRect(117, 2, 4, 6);
-      display->drawRect(122, 0, 4, 8);
-      // display.sendBuffer();
-    }
-  }
-
-
-  display->display();
-}
-
-void updateNodeCount(FirebaseData* fbdo, String user, int* chickenCount, int* pigCount, int* sheepCount, int* goatCount) {
-  int fbchicken = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Chicken/Number");
-  int fbpig = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Pigs/Number");
-  int fbsheep = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Sheep/Number");
-  int fbgoat = Firebase.getInt(*fbdo, "/test/Users/" + user + "/Data/Animal/Goat/Number");
-  *chickenCount = (fbchicken == 0 ? *chickenCount : fbchicken);
-  *pigCount = (fbpig == 0 ? *pigCount : fbpig);
-  *sheepCount = (fbsheep == 0 ? *sheepCount : fbsheep);
-  *goatCount = (fbgoat == 0 ? *goatCount : fbgoat);
-}
-
-
-/**
- * displayNodeCount - Display to the screen how many nodes the user has overall and from each animal type
- * @param display - pointer to the OLED screen where the message will be printed
- * @param chickenCount - the number of chicken nodes connected to the gateway
- * @param pigCount - the number of pig nodes connected to the gateway
- * @param sheepCount - the number of sheep nodes connected to the gateway
- * @param goatCount - the number of goat nodes connected to the gateway
- *  If a farm had all 4 types of animals (chickenCount>0,...,goatCount>0), then the overall number is displayed in row 0
-    chicken in row 10 (FIRST_POSITION), pig in 20, sheep in 30 and goats in 40, but if one or more of the counts is 0, than
-    we won't print it at all. So this is the main functionality here: if chickenCount=0, we won't print "Chickens: #"
-    all the ones after it will move one position back (pig->10, sheep->20,...) and so on.
- */
-void displayNodeCount(SSD1306* display, int chickenCount, int pigCount, int sheepCount, int goatCount) {
-
-  int next_location = FIRST_POSITION;
-
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->setFont(ArialMT_Plain_10);
-  String nStr = "Con. Nodes: ";
-  nStr += String((chickenCount + pigCount + sheepCount + goatCount), DEC);
-  String cStr = "Chickens: ";
-  cStr += String(chickenCount, DEC);
-  String pStr = "Pigs: ";
-  pStr += String(pigCount, DEC);
-  String sStr = "Sheep: ";
-  sStr += String(sheepCount, DEC);
-  String gStr = "Goats: ";
-  gStr += String(goatCount, DEC);
-
-  display->drawString(0, 0, nStr);
-  if (chickenCount > 0) {
-    display->drawString(0, FIRST_POSITION, cStr);
-    next_location += 10;
-  }
-  if (pigCount > 0) {
-    display->drawString(0, next_location, pStr);
-    next_location += 10;
-  }
-  if (sheepCount > 0) {
-    display->drawString(0, next_location, sStr);
-    next_location += 10;
-  }
-  if (goatCount > 0) {
-    display->drawString(0, next_location, gStr);
-  }
-  display->display();
-}
-
-/**
- * showLogo - a function to print on screen the LORA symbol while opening the Gateway device
- * @param display - pointer to the OLED screen where the message will be printed
- */
-void showLogo(SSD1306* display) {
-  uint8_t x_off = (display->getWidth() - logo_width) / 2;
-  uint8_t y_off = (display->getHeight() - logo_height) / 2;
-
-  display->clear();
-  display->drawXbm(x_off, y_off, logo_width, logo_height, logo_bits);
-  display->display();
-}
-
-/**********************************************************************************************************************************************/
-
-
 void parseTime(String str, String& date, String& time, String& timeRange) {
   int hour = 0;
   int minute = 0;
   int second = 0;
-  //Mon Feb 06 18:33:13 2023
+
   sscanf(str.c_str(), "%*s %*s %*d %d:%d:%d %*d", &hour, &minute, &second);
   date = str.c_str() + 4;
   date = date.substring(0, 6) + " " + date.substring(15, 20);
@@ -303,6 +98,10 @@ void parseTime(String str, String& date, String& time, String& timeRange) {
   timeRange = (hour >= 12) ? "PM" : "AM";
 }
 
+/**
+ * Transmitting packet information received from nodes to the firebase
+ * @param packet - a class that contains all the data from the packet
+ */
 void trasnmitToFirebase(PacketInfo& packet) {
   Serial.println("transmitting to firebase...");
   packet.PrintPacket();
@@ -310,8 +109,7 @@ void trasnmitToFirebase(PacketInfo& packet) {
   String email = USER_EMAIL;
   int atIndex = email.indexOf("@");
   String user = email.substring(0, atIndex);
-  Serial.println("user is " + user);
-  //Seriral.println("password is ")
+
   double weight = packet.animal_weight;
   double humidity = packet.humidity;
   double temperature = packet.temperature;
@@ -330,17 +128,16 @@ void trasnmitToFirebase(PacketInfo& packet) {
   String animalType;
 
 
-
-// if (Firebase.ready()) {
   Serial.print("ready");
   /** adding the node to the available nodes list under the user name**/
   animalType = Firebase.getString(fbdo, "/test/Users/" + String(user) + "/Node/" + String(numOfNode) + "/") ? String(fbdo.to<String>()).c_str() : fbdo.errorReason().c_str();
   Serial.println(animalType);
-  if (animalType == String(fbdo.errorReason().c_str())) {
-    animalType = "Chicken";
+  if (animalType == String(fbdo.errorReason().c_str())) {//if the reason is path not found then add empty string
+  //if the reason is bad request then return
+    animalType = " ";
   }
-  //Serial.println(animalType);
-  Firebase.setString(fbdo, "/test/Users/Node/", "Testing non dynamic path");
+
+  //Firebase.setString(fbdo, "/test/Users/Node/", "Testing non dynamic path");
   Firebase.setString(fbdo, "/test/Users/" + user + "/Node/" + numOfNode + "/", animalType);
 
   if (batteryLow) {
@@ -354,7 +151,7 @@ void trasnmitToFirebase(PacketInfo& packet) {
     return;
   }
 
-  Firebase.setDouble(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType + "Number/" + animalNumber + "/" + date + "/Weight", weight);
+  Firebase.setDouble(fbdo, "/test/Users/" + user + "/Data/Animal/" + animalType +  "/" + animalNumber + "/" + date + "/Weight", weight);
   int activity = Firebase.getInt(fbdo, "/test/Users/" + user + "/Data/Animal" + animalType + "/Number" + animalNumber + "/" + date + "/Activity") ? fbdo.to<int>() : 0;
   if (!activity) {
     activity = 1;
@@ -372,16 +169,26 @@ void trasnmitToFirebase(PacketInfo& packet) {
   Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/Tension", voltage);
   Firebase.setString(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/GatewayID", GWId);
   Firebase.setBool(fbdo, "/test/Users/" + user + "/Animal/" + animalType + "/Node/" + numOfNode + "/BatteryLow", batteryLow);
-  //}
+  
 
 }
 
+/**
+ * Setup:
+ * - Serial ( baud = 115200)
+ * - WiFi
+ * - Firebase
+ * - OLED display
+ * - SD
+ * - LORA (frequency set in LORA_BAND)
+ * - Time configuration
+ */
 void setup() {
   Serial.begin(115200);
   delay(2000);
   /* Establishing Wifi connection */
  
-  // Wifi connection isnt needed at all times 
+  // Wifi connection is not needed at all times
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
   for(int i=0; i < 10 && (WiFi.status() != WL_CONNECTED) ; i++) {
@@ -441,12 +248,12 @@ void setup() {
   delay(2000);
 
 
-  //Initianting SD card
+  //Initializing SD card
   spi.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
   delay(200);
   if (!SD.begin(SD_CS, spi)) {
     Serial.println("Card Mount Failed");
-    return;
+    ESP.restart();
   }
   uint8_t cardType = SD.cardType();
 
@@ -501,6 +308,25 @@ void setup() {
   LoRa_rxMode();
 }
 
+
+/**
+ * Flow:
+ * - Display:
+ * Number of nodes for each animal, and the overall nodes connected
+ * Wifi connection
+ * Battery soc
+ * if packets were received from nodes, display their nodeID and RSSI
+ *
+ * - Firebase:
+ * The user can specify how often they want a report from the gateway to be sent
+ * For each report we create a new log, a file saved on the sd card with all the
+ * packets that were received in a given time slot.
+ * Once it is time for a new report, we send the contents of the current file
+ * to the firebase. afterwards we create a new file for the next report.
+ * note: in case of no internet connection when it is time to send a
+ * report, we'll continue writing to the previous file and transmit the packets
+ * of both (or more) reports, when it is time to send a new report.
+ */
 void loop() {
 
   String email = USER_EMAIL;
@@ -521,7 +347,7 @@ void loop() {
   displayPacketsBuffer(&PacketsBuffer, &display, current_log_filename);
 
 
-  //unsigned long currentMillis = millis();(currentMillis - previousMillis) > interval) && 
+  unsigned long currentMillis = millis();//(currentMillis - previousMillis) > interval) && 
   if ((WiFi.status() == WL_CONNECTED) && Firebase.ready()) {  //this means that 12 hours have passed
     //previousMillis = currentMillis;
     PacketInfo packet("", "", 0, 0, 0, 0, 0, 0, DUMMY_PACKET);  //fictive packet, will be filled with real data.
@@ -534,7 +360,7 @@ void loop() {
       return;
     }
     
-    while (get_packet_from_sd(file, &packet)) {
+    while (get_packet_from_sd(file, packet)) {
       //Serial.println("no enter");
       //packet.device_name = "A1";
       if (Firebase.ready()) {
@@ -544,7 +370,18 @@ void loop() {
       }
     }
     file.close();
+
+  //once we send all the packets to the firebase we'd start logging on a new file
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
   }
+  init_sdcard_log(&timeinfo, current_log_filename);
+
+  }
+
 
   delay(1000);
 }
+

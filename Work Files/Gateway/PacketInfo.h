@@ -2,7 +2,7 @@
 #define PACKET_INFO
 
 #include <iostream>
-#include <map>
+//#include <map>
 #include <list>
 #include <string>
 
@@ -13,17 +13,13 @@
 
                 //on TTGO - paxcounter v1.6 change pins as follows:
 #define SD_SCK  14   // 14 //ON ESP32 18
-#define SD_MISO  2   // 2 //ON ESP32 19
+#define SD_MISO  2   // 2  //ON ESP32 19
 #define SD_MOSI  15  // 15 //ON ESP32 23
 #define SD_CS  13    // 13 //ON ESP32 5
 #define MAX_STR 10
-#define FILENAME_SIZE 20 // this was determined according to this string "/+ MONTH DAY + am/pm +.txt"
+//#define FILENAME_SIZE 20 // this was determined according to this string "/+ MONTH DAY + am/pm +.txt"
 #define DUMMY_PACKET "DUMMY"
-
-
 #define BATTERY_LOW "0000000000"
-
-
 
 SPIClass spi = SPIClass();
 
@@ -87,6 +83,9 @@ public:
 	  low_battery_report= t.low_battery_report;
   }
 
+  /**
+   * Printing the contents of the packets to the serial monitor
+   */
   void PrintPacket(){
     Serial.println( "Device: " + device_name
                      +" ,Animal ID: "+ rfid_reading
@@ -101,7 +100,12 @@ public:
   
 };
 
-
+/**
+ * Lists the contents of a directory into the serial port
+ * @param fs - a class for the file system, in our case it is the SD fs
+ * @param dirname - name of directory
+ * @param levels - how many levels into the directory we would to read
+ */
 void listDir(fs::FS& fs, const char* dirname, uint8_t levels) {
   Serial.printf("Listing directory: %s\n", dirname);
 
@@ -133,6 +137,12 @@ void listDir(fs::FS& fs, const char* dirname, uint8_t levels) {
   }
 }
 
+/**
+ * Writing a message into a target file using path
+ * @param fs - a class for the file system, in our case it is the SD fs
+ * @param path - an absolute path for the target file
+ * @param message - the message to be written into the file
+ */
 void writeFile(fs::FS& fs, const char* path, const char* message) {
   Serial.printf("Writing file: %s\n", path);
 
@@ -149,6 +159,12 @@ void writeFile(fs::FS& fs, const char* path, const char* message) {
   file.close();
 }
 
+/**
+ * Appending a message into a target file using path
+ * @param fs - a class for the file system, in our case it is the SD fs
+ * @param path - an absolute path for the target file
+ * @param message - the message to be written into the file
+ */
 void appendFile(fs::FS& fs, const char* path, const char* message) {
   //Serial.printf("Appending to file: %s\n", path);
 
@@ -165,6 +181,11 @@ void appendFile(fs::FS& fs, const char* path, const char* message) {
   file.close();
 }
 
+/**
+ * Deleting a target file from the file system
+ * @param fs - a class for the file system, in our case it is the SD fs
+ * @param path - an absolute path for the target file
+ */
 void deleteFile(fs::FS& fs, const char* path) {
   Serial.printf("Deleting file: %s\n", path);
   if (fs.remove(path)) {
@@ -174,18 +195,29 @@ void deleteFile(fs::FS& fs, const char* path) {
   }
 }
 
+/**
+ * Specified whether the time, whether it is AM or PM
+ * @param time - the current time
+ * @return - am or pm based on the current time
+ */
 String getTime(String time) {
   int hour = time.substring(11, 13).toInt();
-  //Serial.println("the get time is");
-  //Serial.println(time.substring(11, 12));
   return (hour < 12) ? " am" : " pm";
 }
 
+/**
+ * Creates a new file to log incoming packets onto.
+ * The new file is named based on the time of day in the following format
+ * "DAY_OF_WEEK MONTH DAY am/pm.txt"
+ * @param timeinfo - a struct containing the current time
+ * @param filename - a return variable which will contain the name of the file
+ * that was created.
+ *
+ * note: if there already is a file with the same name, we will not create
+ * another one.
+ */
 void init_sdcard_log(struct tm* timeinfo, String& filename) {
   String parsed_time = String(asctime(timeinfo));
-  //Serial.println("init_sd the time is::");
-  //Serial.println(parsed_time);
-
   String log_name = '/' + parsed_time.substring(4, 10) + getTime(parsed_time) + ".txt";  // "/+ DAY_OF_WEEK MONTH DAY + am/pm +.txt"
   listDir(SD, "/", 0);
 
@@ -201,7 +233,11 @@ void init_sdcard_log(struct tm* timeinfo, String& filename) {
   Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 }
 
-
+/**
+ * Logging a new packet into the current log file
+ * @param new_packet - a class containing the information of the packet
+ * @param current_log_filename - the name of the file logging the packets
+ */
 void log_packet_sd(PacketInfo& new_packet, String& current_log_filename) {
 
   Serial.println("Appending to file:" + current_log_filename);
@@ -230,74 +266,87 @@ String get_packet_parameter(String line) {
   return line.substring(line.indexOf(':') + 2, line.indexOf('\n') - 1);  //after the first ': ' and before the '\n'
 }
 
-bool get_packet_from_sd(File file, PacketInfo* packet_to_fill) {
+/**
+ * Reading the contents of the log file into a packetInfo struct, to be sent
+ * to the firebase
+ * @param file - the log file
+ * @param packet_to_fill - packetInfo to be filed with the data from the file
+ * @return
+ * true - in case we filled the packet_to_fill with data to be transmitted
+ * false - in case of EOF
+ *
+ * note: the file is opened outside of the function so we can get the packets
+ * one at a time without resetting the seek pointer.
+ */
+bool get_packet_from_sd(File file, PacketInfo& packet_to_fill) {
 
   while (file.available()) {
     String line = file.readStringUntil('\n');
-    //Serial.println(line);
+    Serial.println("the line in get packet from sd is:" + line);
     if (line == "Package Received from device:") {
       line = file.readStringUntil('\n');  //"Device: "
-      packet_to_fill->device_name = get_packet_parameter(String(line));
+      packet_to_fill.device_name = get_packet_parameter(String(line));
       //Serial.println(packet_to_fill->device_name);
 
       line = file.readStringUntil('\n');  //"Animal ID: "
-      packet_to_fill->rfid_reading = get_packet_parameter(String(line));
+      packet_to_fill.rfid_reading = get_packet_parameter(String(line));
       //Serial.println(packet_to_fill->rfid_reading);
 
       line = file.readStringUntil('\n');  //Animal Weight: "
-      packet_to_fill->animal_weight = get_packet_parameter(String(line)).toDouble();
+      packet_to_fill.animal_weight = get_packet_parameter(String(line)).toDouble();
       //Serial.println(packet_to_fill->animal_weight);
 
       line = file.readStringUntil('\n');  //Temperature: "
-      packet_to_fill->temperature = get_packet_parameter(String(line)).toDouble();
+      packet_to_fill.temperature = get_packet_parameter(String(line)).toDouble();
       //Serial.println(packet_to_fill->temperature);
 
       line = file.readStringUntil('\n');  //humidity "
-      packet_to_fill->humidity = get_packet_parameter(String(line)).toDouble();
+      packet_to_fill.humidity = get_packet_parameter(String(line)).toDouble();
       //Serial.println(packet_to_fill->humidity);
 
       line = file.readStringUntil('\n');  //Voltage Reading: "
-      packet_to_fill->voltage = get_packet_parameter(String(line)).toDouble();
+      packet_to_fill.voltage = get_packet_parameter(String(line)).toDouble();
       //Serial.println(packet_to_fill->voltage);
 
       line = file.readStringUntil('\n');  //"SoC: "
-      packet_to_fill->soc = get_packet_parameter(String(line)).toDouble();
+      packet_to_fill.soc = get_packet_parameter(String(line)).toDouble();
       //Serial.println(packet_to_fill->soc);
 
       line = file.readStringUntil('\n');  //"Time Received: "
-      packet_to_fill->time_received = get_packet_parameter(String(line));
+      packet_to_fill.time_received = get_packet_parameter(String(line));
       //Serial.println(packet_to_fill->time_received);
 
       line = file.readStringUntil('\n');  //"\n"
       //file.close();
       return true;
     } else if (line == "Low Battery Report received from device:") {
-
+      Serial.println("the line in get packet from sd is:" + line);
       line = file.readStringUntil('\n');  //"Device: "
-      packet_to_fill->device_name = get_packet_parameter(String(line));
+      packet_to_fill.device_name = get_packet_parameter(String(line));
       //Serial.println(packet_to_fill->device_name);
 
       line = file.readStringUntil('\n');  //Voltage Reading: "
-      packet_to_fill->voltage = get_packet_parameter(String(line)).toDouble();
+      packet_to_fill.voltage = get_packet_parameter(String(line)).toDouble();
       //Serial.println(packet_to_fill->voltage);
 
       line = file.readStringUntil('\n');  //"Time Received: "
-      packet_to_fill->time_received = get_packet_parameter(String(line));
+      packet_to_fill.time_received = get_packet_parameter(String(line));
       //Serial.println(packet_to_fill->time_received);
 
-      packet_to_fill->rfid_reading = BATTERY_LOW;
+      packet_to_fill.rfid_reading = BATTERY_LOW;
 
       line = file.readStringUntil('\n');  //"\n"
       //file.close();
       return true;
     }
   }
+  Serial.println("\nI'm guessing u never reach here?");
   return false;
 }
 
 /**
- *  fillPacketsBuffer - a function which takes an incoming packet (as string) and puts it (creating a new PacketInfo)
- *  in the packetBuffer for it to be printed and then saved to the sd card
+ * fillPacketsBuffer - a function which takes an incoming packet (as string) and puts it (creating a new PacketInfo)
+ * in the packetBuffer for it to be printed and then saved to the sd card
  * @param packetBuffer - where we keep the packets we still in need to be printed and be put in the SD and printed
  * @param incomingPacket - the packet received as one string
  */
