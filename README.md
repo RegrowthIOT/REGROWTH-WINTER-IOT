@@ -1,4 +1,4 @@
-# Introduction
+## Introduction
 
 An IoT project for livestock farming purposes, that transmits data received from nodes (sensor stations located in farms, that take measurements of animal’s weight, temperature, log date and other environmental metrics) to a central server. Our job is to build a gateway between that sensor station system and a firebase.
 Features: 
@@ -18,14 +18,14 @@ We are three students studying at the Technion - Israel Institute of Technology 
 The course that this project is a part of is 236333 - project in IOT. The course is a part of the ICST lab at the faculty.
 
 
-### Dependencies and Repos Layout 
+## Dependencies and Repos Layout 
 
 The repository is split into two main components:
 
 * Unit tests: The code used for testing all the hardware, for every device there is a library that includes the firmware used specifically to test it. 
 * Work Files: The firmware that makes the project, all the code that is flashed on the esp32 devices that manages the communication, logging packets, the display, and the transmission to the firebase end.
 
-### Libraries Used 
+## Libraries Used 
 
 | Library | By | Function |
 | :---         |     :---:      |          ---: |
@@ -40,6 +40,6 @@ The repository is split into two main components:
 
 
 
-### Documentation and photos 
+## Documentation and photos 
 
 Can be found under: https://github.com/RegrowthIOT/REGROWTH-WINTER-IOT/blob/Master/Units%20Test/documentation.docx
