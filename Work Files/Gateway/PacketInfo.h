@@ -94,6 +94,7 @@ public:
                      +" ,Humidity: " + String(humidity) 
                      +"\nVoltage Reading: " + String(voltage) 
                      +" ,SoC: " + String(soc)
+                     +" ,RSSI:" + String(RSSI)
                      +" ,Time Received: " + time_received 
                       );
   }
@@ -166,8 +167,6 @@ void writeFile(fs::FS& fs, const char* path, const char* message) {
  * @param message - the message to be written into the file
  */
 void appendFile(fs::FS& fs, const char* path, const char* message) {
-  //Serial.printf("Appending to file: %s\n", path);
-
   File file = fs.open(path, FILE_APPEND);
   if (!file) {
     Serial.println("Failed to open file for appending");
@@ -218,7 +217,9 @@ String getTime(String time) {
  */
 void init_sdcard_log(struct tm* timeinfo, String& filename) {
   String parsed_time = String(asctime(timeinfo));
-  String log_name = '/' + parsed_time.substring(4, 10) + getTime(parsed_time) + ".txt";  // "/+ DAY_OF_WEEK MONTH DAY + am/pm +.txt"
+  //for the sake of the presentation we changed the filename to include the time as well so we'll send it every few minutes 
+  // it was parsed_time.substring(4,10)
+  String log_name = '/' + parsed_time.substring(4, 10) +  getTime(parsed_time) + ".txt";  // "/+ DAY_OF_WEEK MONTH DAY + am/pm +.txt" 
   listDir(SD, "/", 0);
 
   if (!SD.exists(log_name)) {
@@ -245,7 +246,7 @@ void log_packet_sd(PacketInfo& new_packet, String& current_log_filename) {
 
     appendFile(SD, current_log_filename.c_str(), ( "Low Battery Report received from device:\nDevice: " + new_packet.device_name
                                                    +"\nVoltage Reading: " + String(new_packet.voltage) 
-                                                   +"\nTime Received: " + new_packet.time_received ).c_str() );
+                                                   +"\nTime Received: " + new_packet.time_received +"\n").c_str() );
     Serial.printf("Append Success\n");
 
   } else {
@@ -282,65 +283,52 @@ bool get_packet_from_sd(File file, PacketInfo& packet_to_fill) {
 
   while (file.available()) {
     String line = file.readStringUntil('\n');
-    //Serial.println("the line in get packet from sd is:" + line);
     if (line == "Package Received from device:") {
       line = file.readStringUntil('\n');  //"Device: "
       packet_to_fill.device_name = get_packet_parameter(String(line));
-      //Serial.println(packet_to_fill->device_name);
 
       line = file.readStringUntil('\n');  //"Animal ID: "
       packet_to_fill.rfid_reading = get_packet_parameter(String(line));
-      //Serial.println(packet_to_fill->rfid_reading);
 
       line = file.readStringUntil('\n');  //Animal Weight: "
       packet_to_fill.animal_weight = get_packet_parameter(String(line)).toDouble();
-      //Serial.println(packet_to_fill->animal_weight);
 
       line = file.readStringUntil('\n');  //Temperature: "
       packet_to_fill.temperature = get_packet_parameter(String(line)).toDouble();
-      //Serial.println(packet_to_fill->temperature);
 
       line = file.readStringUntil('\n');  //humidity "
       packet_to_fill.humidity = get_packet_parameter(String(line)).toDouble();
-      //Serial.println(packet_to_fill->humidity);
 
       line = file.readStringUntil('\n');  //Voltage Reading: "
       packet_to_fill.voltage = get_packet_parameter(String(line)).toDouble();
-      //Serial.println(packet_to_fill->voltage);
 
       line = file.readStringUntil('\n');  //"SoC: "
       packet_to_fill.soc = get_packet_parameter(String(line)).toDouble();
-      //Serial.println(packet_to_fill->soc);
 
       line = file.readStringUntil('\n');  //"Time Received: "
       packet_to_fill.time_received = get_packet_parameter(String(line));
-      //Serial.println(packet_to_fill->time_received);
-
+      
       line = file.readStringUntil('\n');  //"\n"
-      //file.close();
+      
       return true;
     } else if (line == "Low Battery Report received from device:") {
-      //Serial.println("the line in get packet from sd is:" + line);
+      
       line = file.readStringUntil('\n');  //"Device: "
       packet_to_fill.device_name = get_packet_parameter(String(line));
-      //Serial.println(packet_to_fill->device_name);
-
+      
       line = file.readStringUntil('\n');  //Voltage Reading: "
       packet_to_fill.voltage = get_packet_parameter(String(line)).toDouble();
-      //Serial.println(packet_to_fill->voltage);
-
+      
       line = file.readStringUntil('\n');  //"Time Received: "
       packet_to_fill.time_received = get_packet_parameter(String(line));
-      //Serial.println(packet_to_fill->time_received);
-
+      
       packet_to_fill.rfid_reading = BATTERY_LOW;
-
       line = file.readStringUntil('\n');  //"\n"
-      //file.close();
+      
       return true;
     }
   }
-  //Serial.println("\nI'm guessing u never reach here?");
+
   return false;
 }
 

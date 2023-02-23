@@ -9,8 +9,8 @@
 
 #define I2C_ADDRESS_OF_SCREEN 0x3C
 
-#define WIFI_SSID "Trio"
-#define WIFI_PASSWORD "DanaAmalAida"
+#define WIFI_SSID "AndroidOP"
+#define WIFI_PASSWORD "IoTPresent"
 
 #define USER_EMAIL "iot.regrowth@gmail.com"
 #define USER_PASSWORD "regrowth123"
@@ -32,7 +32,7 @@ const int daylightOffset_sec = 3600;
 
 //variables for the time interval of sending the report to the firebase
 unsigned long previousMillis = 0;
-const long interval = 60000;// 43200000;  // interval at which to send data (12 hours in milliseconds = 12*60*60*1000)
+const long interval = 90000;// 43200000;  // interval at which to send data (12 hours in milliseconds = 12*60*60*1000)
 
 int chickenCount = 0;
 int pigCount = 0;
@@ -40,8 +40,7 @@ int sheepCount = 0;
 int goatCount = 0;
 
 std::list<PacketInfo> PacketsBuffer = std::list<PacketInfo>();
-//std::map<String, ANIMAL_TYPE> Nodes = std::map<String, ANIMAL_TYPE>();  //key = device_name (node)
-                                                                        // data = animal_type (in node)
+
 
 String current_log_filename;
 SSD1306 display(I2C_ADDRESS_OF_SCREEN, OLED_SDA, OLED_SCL);
@@ -283,9 +282,7 @@ void setup() {
 
   /* Creating a log on sd*/
   init_sdcard_log(&timeinfo, current_log_filename);
-
-  //Serial.println(temp);
-  Serial.println(current_log_filename);
+  Serial.println("current log file is: " + current_log_filename);
 
   previousMillis = millis();
 
@@ -318,6 +315,8 @@ void loop() {
   String email = USER_EMAIL;
   int atIndex = email.indexOf("@");
   String user = email.substring(0, atIndex);
+  
+  //Fetching the number of nodes for each animal
   if ((WiFi.status() == WL_CONNECTED) && (Firebase.ready())) {
     updateNodeCount(&fbdo, user, &chickenCount, &pigCount, &sheepCount, &goatCount);
   }
@@ -325,18 +324,15 @@ void loop() {
   display.clear();
   long rssi = WiFi.RSSI();
   displayWifi(&display, rssi, (WiFi.status() != WL_CONNECTED));
-
   displayBattery(BL.getBatteryChargeLevel(), &display);
   displayNodeCount(&display, chickenCount, pigCount, sheepCount, goatCount);
 
   //print on incoming nodes
   displayPacketsBuffer(&PacketsBuffer, &display, current_log_filename);
   
-
   unsigned long currentMillis = millis();
   if ( ((currentMillis - previousMillis) > interval) && (WiFi.status() == WL_CONNECTED) && Firebase.ready()) {  //this means that the time interval has passed
     previousMillis = currentMillis;
-
 
     PacketInfo packet("", "", 0, 0, 0, 0, 0, 0, DUMMY_PACKET);  //dummy packet, will be filled with real data.
     Serial.printf("Reading file: \n");
@@ -373,7 +369,6 @@ void loop() {
       return;
     }
     init_sdcard_log(&timeinfo, current_log_filename);
-    //delay(1500);
 
   }
   delay(1000);

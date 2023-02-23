@@ -17,17 +17,16 @@
 #define OLED_RST    16
 
 #define FIRST_POSITION 10
-
+#define TEMPORARY_BATTERY_READING 70
 /**
  * displayBattery - show user the current percentage battery has left
  * @param percent - int from 0 to 100 to represent the battery percentage
  * @param display - pointer to the OLED screen where the message will be printed
  */
 void displayBattery(uint8_t percent, SSD1306* display) {
-  // display.clear();
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
-
+  percent = TEMPORARY_BATTERY_READING;
   display->drawProgressBar(100, 22, 20, 5, percent);
 
   String percentStr = String(percent, DEC);
@@ -43,7 +42,7 @@ void displayBattery(uint8_t percent, SSD1306* display) {
  */
 void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display, String& current_log_filename) {
   if (PacketsBuffer->size() > 0) {
-    int time_on_screen = 1500;
+    int time_on_screen = 2000;
 
     //print about packet received
     String line_str = "Received,Node ";
@@ -70,7 +69,6 @@ void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display
     delay(time_on_screen);
 
     //log to sd
-
     log_packet_sd(PacketsBuffer->front(), current_log_filename);
 
     //pop
@@ -89,11 +87,8 @@ void displayPacketsBuffer(std::list<PacketInfo>* PacketsBuffer, SSD1306* display
 */
 
 void displayWifi(SSD1306* display, long rssi, bool notConnected) {
-  // display.clear();
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
-  // String rssi_str = String(rssi, DEC);
-  // display.drawString(65, 0, rssi_str);
 
   if (notConnected) {
     if (rssi == 0) {
