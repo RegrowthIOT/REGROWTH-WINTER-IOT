@@ -13,10 +13,10 @@
 #define WIFI_PASSWORD "IoTPresent"
 
 #define USER_EMAIL "iot.regrowth@gmail.com"
-#define USER_PASSWORD "regrowth123"
+#define USER_PASSWORD ""
 
-#define API_KEY "AIzaSyAbULIZmjSP87utoUVa5Mf1Jgz13Ffuolk"
-#define DATABASE_SECRET "0vh0uCSsK39x2AUAAavXKk8cRfkcGrFck3rpc6gf"
+#define API_KEY ""
+#define DATABASE_SECRET ""
 #define DATABASE_URL "regrowth-c498e-default-rtdb.europe-west1.firebasedatabase.app"
 
 //Define Firebase Data object
